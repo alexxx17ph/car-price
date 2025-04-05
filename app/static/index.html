@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Предсказание цены</title>
+    <link rel="icon" href="/2.png" type="image/png">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #d7d7d7;
+        }
+        .header {
+            height: 30vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: url('/static/1.jpg') no-repeat center center;
+            background-size: cover;
+            padding: 40px;
+            text-align: center;
+            color: white;
+            position: relative;
+        }
+        .header::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(2px);
+        }
+        .header h1, .header h2 {
+            position: relative;
+            z-index: 1;
+        }
+        .header h1 {
+            font-size: 48px;
+            margin-bottom: 5px;
+        }
+        .header h2 {
+            font-size: 18px;
+        }
+        .content {
+            display: flex;
+            justify-content: space-between;
+            width: 80%;
+            margin: 20px auto;
+            flex-wrap: nowrap;
+        }
+        .form-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 15px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .extra-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-left: 70px;
+            text-align: left;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+        .extra-options h3 {
+            margin-top: -5px;
+        }
+        .form-container, .extra-options {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        input, select {
+            padding: 8px;
+            width: 240px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        input[type="text"] {
+            width: 223px;
+        }
+        .checkbox-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: flex-start;
+        }
+        .checkbox-container label {
+            padding: 7px 10px;
+            font-size: 13px;
+            border: 1.5px solid #007bff;
+            border-radius: 4px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.3s, color 0.3s;
+        }
+        .checkbox-container input {
+            display: none;
+        }
+        .checkbox-container input:checked + label {
+            background-color: #007bff;
+            color: white;
+        }
+        .predict-button {
+            display: block;
+            margin: 30px auto;
+            padding: 12px 25px;
+            background-color: blue;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+        }
+        .predict-button:hover {
+            background-color: darkblue;
+        }
+        @media (max-width: 768px) {
+            .content {
+                flex-direction: column;
+                align-items: center;
+            }
+            .extra-options {
+                text-align: center;
+                margin-left: 0;
+                margin-top: 20px;
+            }
+            .checkbox-container {
+                justify-content: center;
+            }
+            .header h1 {
+                font-size: 32px;
+            }
+            .header h2 {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+
+<script>
+function validateInput() {
+    let yearInput = document.getElementById("year");
+    let mileageInput = document.getElementById("mileage");
+
+    // Получаем значения 
+    let year = parseInt(yearInput.value);
+    // Убираем пробелы из строки и преобразуем в число
+    let mileage = parseInt(mileageInput.value.replace(/\s+/g, ''));
+
+    // Проверяем год (должен быть числом и в диапазоне)
+    if (isNaN(year) || year < 2000 || year > 2025) {
+        alert("Введите корректный год от 2000 до 2025.");
+        yearInput.value = "";  // Очищаем поле
+        return false;
+    }
+
+    // Проверяем пробег (только число и диапазон)
+    if (isNaN(mileage) || mileage < 100 || mileage > 700000) {
+        alert("Введите корректный пробег от 100 до 700 000 км.");
+        mileageInput.value = "";  // Очищаем поле
+        return false;
+    }
+
+    return true;  // Если всё ОК, продолжаем
+}
+function predictPrice() {
+    if (!validateInput()) {
+        return; // Останавливаем отправку, если данные некорректны
+    }
+
+    let data = {
+    year: document.getElementById("year").value,
+    mileage: document.getElementById("mileage").value,
+    generation: document.getElementById("generation").value,
+    transmission: document.getElementById("transmission").value,
+    customs: document.getElementById("customs").value,
+    condition: document.getElementById("condition").value,
+    city: document.getElementById("city").value,
+    color: document.getElementById("color").value,
+    options: []
+    };
+
+    document.querySelectorAll(".checkbox-container input[type='checkbox']").forEach(checkbox => {
+    if (checkbox.checked) {
+        data.options.push(checkbox.id);  // Добавляем id чекбокса (или название опции) в список
+        }
+    });
+
+    fetch("http://127.0.0.1:8000/predict/", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data) // Тело запроса, объект дата преобразуется в строку джисон
+    }) // Метод fetch отправляет запрос на сервер по указаному юрл
+    .then(response => response.json()) // извлекает джисон данные из ответа
+    .then(result => {
+        let resultElement = document.getElementById("result");
+        resultElement.innerText = "Предсказанная цена: " + result.predicted_price + " тенге";
+        
+        // Прокручиваем вниз к результату
+        resultElement.scrollIntoView({ behavior: "smooth" });
+    }) // выводит полученную цену в блок
+    .catch(error => console.error("Ошибка:", error)); // выводит ошибку в консоль если есть
+}
+</script>
+
+<body>
+    <div class="header">
+        <h1>Узнай стоимость своей Lada Granta!</h1>
+        <h2>Введите параметры автомобиля и получите предсказание рыночной цены</h2>
+    </div>
+    
+    <div class="content">
+        <div class="form-container">
+            <input type="text" id="year" placeholder="Год">
+            <input type="text" id="mileage" placeholder="Пробег, км">
+            <input type="text" list="cities" id="city" name="city" placeholder="Введите город">
+            <datalist id="cities">
+                <option value="Астана">
+                <option value="Алматы">
+                <option value="Шымкент">
+                <option value="Семей">
+                <option value="Аягоз">
+                <option value="Улкен Нарын">
+                <option value="Кокпекты">
+                <option value="Аксуат">
+                <option value="Акколь">
+                <option value="Атбасар">
+                <option value="Балкашино">
+                <option value="Есиль">
+                <option value="Кокшетау">
+                <option value="Макинск">
+                <option value="Степногорск">
+                <option value="Щучинск">
+                <option value="Астраханка">
+                <option value="Актобе">
+                <option value="Кандыагаш">
+                <option value="Шалкар">
+                <option value="Аккыстау">
+                <option value="Конаев">
+                <option value="Талдыкорган">
+                <option value="Талгар">
+                <option value="Хоргос">
+                <option value="Коктобе">
+                <option value="Сарыозек">
+                <option value="Ушарал">
+                <option value="Атырау">
+                <option value="Кульсары">
+                <option value="Аксай">
+                <option value="Казталовка">
+                <option value="Жангала">
+                <option value="Уральск">
+                <option value="Жымпиты">
+                <option value="Каратобе">
+                <option value="Таскала">
+                <option value="Тараз">
+                <option value="Кордай">
+                <option value="Бауыржана Момышулы">
+                <option value="Караганда">
+                <option value="Жезказган">
+                <option value="Сарань">
+                <option value="Сатпаев">
+                <option value="Темиртау">
+                <option value="Шахтинск">
+                <option value="Балхаш">
+                <option value="Жанаарка">
+                <option value="Баянаул">
+                <option value="Аркалык">
+                <option value="Костанай">
+                <option value="Лисаковск">
+                <option value="Рудный">
+                <option value="Жаксы">
+                <option value="Затобольск">
+                <option value="Карабалык">
+                <option value="Боровской">
+                <option value="Денисовка">
+                <option value="Аулиеколь">
+                <option value="Аральск">
+                <option value="Жалагаш">
+                <option value="Жанакорган">
+                <option value="Кызылорда">
+                <option value="Шиели">
+                <option value="Шаульдер">
+                <option value="Актау">
+                <option value="Жанаозен">
+                <option value="Форт-Шевченко">
+                <option value="Мангистау">
+                <option value="Бейнеу">
+                <option value="Аксу">
+                <option value="Павлодар">
+                <option value="Экибастуз">
+                <option value="Кашыр">
+                <option value="Железинка">
+                <option value="Петропавловск">
+                <option value="Новоишимский">
+                <option value="Большая Владимировка">
+                <option value="Акжар">
+                <option value="Арысь">
+                <option value="Жетысай">
+                <option value="Казыгурт">
+                <option value="Ленгер">
+                <option value="Сарыагаш">
+                <option value="Туркестан">
+                <option value="Атакент">
+                <option value="Кентау">
+                <option value="Сай-Отес">
+                <option value="Шаульдер">
+                <option value="Жезказган">
+                <option value="Алтай">
+                <option value="Глубокое">
+                <option value="Зайсан">
+                <option value="Риддер">
+                <option value="Усть-Каменогорск">
+                <option value="Шемонаиха">
+                <option value="Урджар">
+                <option value="Калбатау">
+                <option value="Байконыр">
+            </datalist>
+            <select id="generation">
+                <option value="" disabled selected>Поколение</option>
+                <option value="2011 - 2018 1 поколение">2011 - 2018 1 поколение</option>
+                <option value="2018 - н.в. 1 поколение рестайлинг">2018 - н.в. 1 поколение рестайлинг</option>
+            </select>
+            <select id="transmission">
+                <option value="" disabled selected>Коробка передач</option>
+                <option value="Автомат">Автомат</option>
+                <option value="Механика">Механика</option>
+                <option value="Робот">Робот</option>
+            </select>
+            <select id="customs">
+                <option value="" disabled selected>Растаможен в Казахстане</option>
+                <option value="Да">Да</option>
+                <option value="Нет">Нет</option>
+            </select>
+            <select id="condition">
+                <option value="" disabled selected>Состояние</option>
+                <option value="Новый">Новый</option>
+                <option value="Б/у">Б/у</option>
+                <option value="Не на ходу">Не на ходу</option>
+            </select>
+
+            <select id="color">
+                <option value="" disabled selected>Выберите цвет</option>
+                <option value="коричневый металлик">Коричневый металлик</option>
+                <option value="белый">Белый</option>
+                <option value="черный">Черный</option>
+                <option value="белый металлик">Белый металлик</option>
+                <option value="серый">Серый</option>
+                <option value="редкие">Редкий</option>
+                <option value="серебристый">Серебристый</option>
+                <option value="серебристый металлик">Серебристый металлик</option>
+                <option value="серый металлик">Серый металлик</option>
+                <option value="черный металлик">Черный металлик</option>
+                <option value="синий">Синий</option>
+                <option value="синий металлик">Синий металлик</option>
+                <option value="коричневый">Коричневый</option>
+            </select>
+        </div>
+        
+        <div class="extra-options">
+            <h3>Дополнительные параметры:</h3>
+            <div class="checkbox-container">
+                <input type="checkbox" id="abs"><label for="abs">ABS</label>
+                <input type="checkbox" id="cd_changer"><label for="cd_changer">CD-чейнджер</label>
+                <input type="checkbox" id="usb"><label for="usb">USB</label>
+                <input type="checkbox" id="bluetooth"><label for="bluetooth">bluetooth</label>
+                <input type="checkbox" id="auto_start"><label for="auto_start">автозапуск</label>
+                <input type="checkbox" id="alcantara"><label for="alcantara">алькантара</label>
+                <input type="checkbox" id="audio"><label for="audio">аудиосистема</label>
+                <input type="checkbox" id="trunk"><label for="trunk">багажник</label>
+                <input type="checkbox" id="board_pc"><label for="board_pc">бортовой компьютер</label>
+                <input type="checkbox" id="velour"><label for="velour">велюр</label>
+                <input type="checkbox" id="no_investment"><label for="no_investment">вложений не требует</label>
+                <input type="checkbox" id="phone"><label for="phone">встроенный телефон</label>
+                <input type="checkbox" id="winter_mode"><label for="winter_mode">зимний режим</label>
+                <input type="checkbox" id="camera"><label for="camera">камера заднего вида</label>
+                <input type="checkbox" id="climate"><label for="climate">климат-контроль</label>
+                <input type="checkbox" id="air_conditioning"><label for="air_conditioning">кондиционер</label>
+                <input type="checkbox" id="headlight_corrector"><label for="headlight_corrector">корректор фар</label>
+                <input type="checkbox" id="cruise"><label for="cruise">круиз-контроль</label>
+                <input type="checkbox" id="xenon"><label for="xenon">ксенон</label>
+                <input type="checkbox" id="sunroof"><label for="sunroof">люк</label>
+                <input type="checkbox" id="nav"><label for="nav">навигационная система</label>
+                <input type="checkbox" id="bodykit"><label for="bodykit">обвес</label>
+                <input type="checkbox" id="mirror_heat"><label for="mirror_heat">обогрев зеркал</label>
+                <input type="checkbox" id="parktronic"><label for="parktronic">парктроники</label>
+                <input type="checkbox" id="seat_heating"><label for="seat_heating">подогрев сидений</label>
+                <input type="checkbox" id="electro"><label for="electro">полный электропакет</label>
+                <input type="checkbox" id="fog"><label for="fog">противотуманки</label>
+                <input type="checkbox" id="subwoofer"><label for="subwoofer">сабвуфер</label>
+                <input type="checkbox" id="fresh"><label for="fresh">свежедоставлен</label>
+                <input type="checkbox" id="alarm"><label for="alarm">сигнализация</label>
+                <input type="checkbox" id="spoiler"><label for="spoiler">спойлер</label>
+                <input type="checkbox" id="sport"><label for="sport">спортивный режим</label>
+                <input type="checkbox" id="inspection"><label for="inspection">техосмотр пройден</label>
+                <input type="checkbox" id="crystal"><label for="crystal">хрустальная оптика</label>
+                <input type="checkbox" id="curtains"><label for="curtains">шторки</label>
+            </div>
+        </div>
+    </div>
+    
+    <button class="predict-button" onclick="predictPrice()">Предсказать цену</button>
+    <h3 id="result" style="text-align: center; font-size: 16px; font-weight: bold; color: #323232;"></h3>
+</body>
+</html>
