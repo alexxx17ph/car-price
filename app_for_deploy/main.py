@@ -4,9 +4,15 @@ import xgboost as xgb
 import numpy as np
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
+import os
 
 # Создаем объект FastAPI
 app = FastAPI()
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
+
 
 # Указываем папку для статических файлов (index.html, CSS, JS)
 app.mount("/static", StaticFiles(directory="static"), name="static")
