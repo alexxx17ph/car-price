@@ -9,11 +9,6 @@ import os
 # Создаем объект FastAPI
 app = FastAPI()
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
-
-
 # Указываем папку для статических файлов (index.html, CSS, JS)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -139,3 +134,7 @@ async def predict(features: CarFeatures, request: Request):
     # Возвращаем результат предсказания
     formatted_price = f"{round(prediction[0], -4):,}".replace(",", " ")
     return {"predicted_price": formatted_price}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
